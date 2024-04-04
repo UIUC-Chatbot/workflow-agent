@@ -50,10 +50,10 @@ def get_llm():
   if os.getenv('OPENAI_API_TYPE') == 'azure':
     return AzureChatOpenAI(
         azure_deployment="gpt-4-128k",
-        openai_api_version=os.getenv("AZURE_0125_MODEL_VERSION"),
+        openai_api_version=os.getenv("AZURE_MODEL_VERSION"),
         temperature=0,
-        azure_endpoint=os.getenv("AZURE_0125_MODEL_ENDPOINT"),
-        openai_api_key=os.getenv("AZURE_0125_MODEL_API_KEY"),
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        openai_api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     )
   else:
     return ChatOpenAI(
@@ -64,11 +64,13 @@ def get_llm():
 
 class WorkflowAgent:
 
-  def __init__(self, langsmith_run_id):
+  @classmethod
+  async def create(cls, langsmith_run_id):
+    self = cls()
     print("Langgraph v2 agent initialized")
     self.langsmith_run_id = langsmith_run_id
     self.llm = get_llm()
-    self.tools = get_tools(langsmith_run_id)
+    self.tools = await get_tools(langsmith_run_id, sync=False)
     self.planner_prompt = ChatPromptTemplate.from_template(
         """For the given objective, come up with a simple step by step plan. \
 This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps. \
@@ -110,6 +112,7 @@ Update your plan accordingly. If no more steps are needed and you can return to 
                                                         hub.pull("hwchase17/openai-functions-agent"))
     self.agent_executor = create_agent_executor(self.agent_runnable, self.tools)
     self.workflow = self.create_workflow()
+    return self
 
   def create_workflow(self):
     workflow = StateGraph(State)

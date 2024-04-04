@@ -23,8 +23,12 @@ async def main():
   API reference for Webhook objects: https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#issue_comment
   WEBHOOK explainer: https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps
   """
-  f = open('issue.json')
-  issue: Issue = json.load(f)
+  with open('issue.json') as f:
+    issue_data = json.load(f)
+
+  if issue_data:
+    issue: Issue = Issue.from_json(issue_data)
+    
   langsmith_run_id = str(uuid.uuid4())
   
   if not issue:
@@ -45,7 +49,7 @@ async def main():
     prompt = hub.pull("kastanday/new-github-issue").format(issue_description=issue.format_issue())
 
     print("ABOUT TO CALL WORKFLOW AGENT on COMMENT OPENED")
-    bot = WorkflowAgent(langsmith_run_id=langsmith_run_id)
+    bot = await WorkflowAgent.create(langsmith_run_id=langsmith_run_id)
     result = await bot.run(prompt)
 
     # COLLECT PARALLEL RESULTS

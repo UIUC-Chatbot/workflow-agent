@@ -6,7 +6,7 @@ import langchain
 from dotenv import load_dotenv
 from langchain.agents import load_tools
 from langchain.agents.agent_toolkits.github.toolkit import GitHubToolkit
-from langchain.tools.shell.tool import ShellTool
+from langchain_community.tools import ShellTool
 from langchain.agents.agent_toolkits.file_management.toolkit import FileManagementToolkit
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain_community.tools import VectorStoreQATool
@@ -21,6 +21,10 @@ from langchain_community.utilities.github import GitHubAPIWrapper
 from utils.vector_db import get_vectorstore_retriever_tool
 
 load_dotenv(override=True, dotenv_path='../../.env')
+# This import is required only for jupyter notebooks, since they have their own eventloop
+import nest_asyncio
+
+nest_asyncio.apply()
 
 os.environ["LANGCHAIN_TRACING"] = "true"  # If you want to trace the execution of the program, set to "true"
 langchain.debug = False  # type: ignore
@@ -28,7 +32,7 @@ VERBOSE = True
 root_dir = os.getenv("root_dir","/app")
 
 
-def get_tools(langsmith_run_id: str, sync=True):
+async def get_tools(langsmith_run_id: str, sync=True):
   """Main function to assemble tools for ML for Bio project."""
 
   # CODE EXECUTION - langsmith_run_id as unique identifier for the sandbox
@@ -56,6 +60,7 @@ def get_tools(langsmith_run_id: str, sync=True):
     llm = AzureChatOpenAI(
         temperature=0.1,
         model="gpt-4-1106-Preview",
+
     )
     # max_retries=3,
     # request_timeout=60 * 3,
@@ -66,10 +71,10 @@ def get_tools(langsmith_run_id: str, sync=True):
   # GOOGLE SEARCH
   search = load_tools(["serpapi"])
 
-  # GITHUB
-  github = GitHubAPIWrapper()  # type: ignore
-  toolkit = GitHubToolkit.from_github_api_wrapper(github)
-  github_tools: list[BaseTool] = toolkit.get_tools()
+  # # GITHUB
+  # github = GitHubAPIWrapper()  # type: ignore
+  # toolkit = GitHubToolkit.from_github_api_wrapper(github)
+  # github_tools: list[BaseTool] = toolkit.get_tools()
 
   # TODO: more vector stores per Bio package: trimmomatic, gffread, samtools, salmon, DESeq2 and ggpubr
   docs_tools: List[VectorStoreQATool] = [
@@ -108,7 +113,7 @@ def get_tools(langsmith_run_id: str, sync=True):
   # Probably unnecessary: WikipediaQueryRun, WolframAlphaQueryRun, PubmedQueryRun, ArxivQueryRun
   # arxiv_tool = ArxivQueryRun()
 
-  tools: list[BaseTool] = github_tools + search + docs_tools + shell + browser_tools + file_management + human_tools
+  tools: list[BaseTool] =  search + docs_tools + [shell] + browser_tools + file_management + human_tools # + github_tools
   return tools
 
 

@@ -6,7 +6,9 @@ import time
 
 from langsmith import Client
 import langsmith
+import ray
 
+@ray.remote
 def post_sharable_url(issue, langsmith_run_id, time_delay_s):
   sharable_url = get_langsmith_trace_sharable_url(langsmith_run_id, time_delay_s=time_delay_s)
   text = f"👉 [Follow the bot's progress in real time on LangSmith]({sharable_url})."
