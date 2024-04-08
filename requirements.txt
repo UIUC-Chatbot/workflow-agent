@@ -5,7 +5,7 @@ pydantic==1.10.13 # pydantic v1 works better for ray
 langchain==0.1.*
 langchain-openai==0.1.*
 langchain-community==0.0.*
-langgraph==0.0.*
+langgraph==0.0.26
 langchainhub==0.1.*
 langchain-experimental==0.0.*
 langsmith==0.1.*

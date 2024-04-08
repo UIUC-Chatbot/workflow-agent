@@ -22,9 +22,9 @@ from utils.vector_db import get_vectorstore_retriever_tool
 
 load_dotenv(override=True, dotenv_path='../../.env')
 # This import is required only for jupyter notebooks, since they have their own eventloop
-import nest_asyncio
+# import nest_asyncio
 
-nest_asyncio.apply()
+# nest_asyncio.apply()
 
 os.environ["LANGCHAIN_TRACING"] = "true"  # If you want to trace the execution of the program, set to "true"
 langchain.debug = False  # type: ignore
@@ -32,13 +32,13 @@ VERBOSE = True
 root_dir = os.getenv("root_dir","/app")
 
 
-async def get_tools(langsmith_run_id: str, sync=True):
+def get_tools(langsmith_run_id: str, sync=True):
   """Main function to assemble tools for ML for Bio project."""
 
   # CODE EXECUTION - langsmith_run_id as unique identifier for the sandbox
   
   # SHELL & FILES
-  shell = ShellTool(ask_human_input=True)
+  shell = ShellTool()
   file_management = FileManagementToolkit(
     # If you don't provide a root_dir, operations will default to the current working directory
     root_dir=root_dir

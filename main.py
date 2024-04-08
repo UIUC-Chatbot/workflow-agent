@@ -7,63 +7,47 @@ import uuid
 
 from dotenv import load_dotenv
 import ray
-from agent.langgraph_agent_v2 import WorkflowAgent
+from agent.langgraph_agent_lats import WorkflowAgent
 from type.issue import Issue
 from langchain import hub
 
 from utils.utils import post_sharable_url
+# import nest_asyncio
+
+# nest_asyncio.apply()
 
 # load API keys from globally-availabe .env file
 load_dotenv(dotenv_path='.env', override=True)
 
-async def main():
+def main():
   """
+  Executes the main workflow of the application.
 
-  DOCS: 
-  API reference for Webhook objects: https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#issue_comment
-  WEBHOOK explainer: https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps
+  This function initializes the application, loads issue data from a JSON file, and processes it using a WorkflowAgent. If the issue data is valid, it runs the workflow to handle the issue. In case of any exceptions, it logs the error along with a traceback.
+
+  The function also generates a unique run ID for each execution to track the workflow process. It ensures that the application gracefully handles errors and provides detailed logs for debugging purposes.
+
+  Returns:
+      tuple: An empty string and HTTP status code 200, indicating successful execution.
   """
-  with open('issue.json') as f:
-    issue_data = json.load(f)
-
-  if issue_data:
-    issue: Issue = Issue.from_json(issue_data)
     
   langsmith_run_id = str(uuid.uuid4())
   
-  if not issue:
-    raise ValueError(f"Missing the body of the webhook response. Response is {issue}")
-
   try:
-    result_futures = []
+    with open('issue.json') as f:
+      issue_data = json.load(f)
 
-    # 1. INTRO COMMENT
-    # issue.create_comment(messageForNewIssues)
-    # result_futures.append(post_comment.remote(issue_or_pr=issue, text=MESSAGE_HANDLE_ISSUE_OPENED, time_delay_s=0))
-
-    # 2. SHARABLE URL (in background)
-    result_futures.append(post_sharable_url.remote(issue=issue, langsmith_run_id=langsmith_run_id, time_delay_s=20))
-
-    # 3. RUN BOT
-    # bot = github_agent.GH_Agent.remote()
-    prompt = hub.pull("kastanday/new-github-issue").format(issue_description=issue.format_issue())
+    if issue_data:
+      issue: Issue = Issue.from_json(issue_data)
+    
+    if not issue:
+      raise ValueError(f"Missing the body of the webhook response. Response is {issue}")
 
     print("ABOUT TO CALL WORKFLOW AGENT on COMMENT OPENED")
-    bot = await WorkflowAgent.create(langsmith_run_id=langsmith_run_id)
-    result = await bot.run(prompt)
 
-    # COLLECT PARALLEL RESULTS
-    for _i in range(0, len(result_futures)):
-      ready, not_ready = ray.wait(result_futures)
-      result = ray.get(ready[0])
-      result_futures = not_ready
-      if not result_futures:
-        break
-
-    # FIN: Conclusion & results comment
-    # ray.get(post_comment.remote(issue_or_pr=issue, text=str(result['output']), time_delay_s=0))
-    logging.info(f"✅✅ Successfully completed the issue: {issue}")
-    logging.info(f"Output: {str(result['output'])}")
+    bot = WorkflowAgent(langsmith_run_id=langsmith_run_id)
+    
+    run_workflow(bot, issue)
   except Exception as e:
     logging.error(f"❌❌ Error in {inspect.currentframe().f_code.co_name}: {e}\nTraceback:\n", traceback.print_exc())
     err_str = f"Error in {inspect.currentframe().f_code.co_name}: {e}" + "\nTraceback\n```\n" + str(
@@ -73,5 +57,17 @@ async def main():
 
   return '', 200
 
+def run_workflow(bot: WorkflowAgent, issue: Issue):
+
+  # Create final prompt for user
+  prompt = f"""Here's your latest assignment: {issue.format_issue()}"""
+
+  # RUN BOT
+  result = bot.run(prompt)
+
+  # FIN: Conclusion & results comment
+  logging.info(f"✅✅ Successfully completed the issue: {issue}")
+  logging.info(f"Output: {result}")
+
 if __name__ == '__main__':
-  asyncio.run(main())
+  bot = main()

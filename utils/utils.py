@@ -6,10 +6,9 @@ import time
 
 from langsmith import Client
 import langsmith
-import ray
 
-@ray.remote
 def post_sharable_url(issue, langsmith_run_id, time_delay_s):
+  logging.info(f"🚀 Posting sharable URL for LangSmith run: {langsmith_run_id}")
   sharable_url = get_langsmith_trace_sharable_url(langsmith_run_id, time_delay_s=time_delay_s)
   text = f"👉 [Follow the bot's progress in real time on LangSmith]({sharable_url})."
   logging.info(f"Sharable URL: {text}")
@@ -67,6 +66,7 @@ def get_langsmith_trace_sharable_url(run_id_in_metadata, project_name='', time_d
     run = get_langsmit_run_from_metadata(str(run_id_in_metadata), metadata_key="run_id_in_metadata")
     if run is not None:
       break
+    print(f"Attempt {_i} to find run with metadata {run_id_in_metadata}")
     time.sleep(5)
 
   if run is None:
