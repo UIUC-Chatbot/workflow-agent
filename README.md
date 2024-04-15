@@ -1,3 +1,10 @@
+# Welcome to the 2024 Ashby Prize in Computational Science Hackathon
+* [Hackathon general info website](https://ai.ncsa.illinois.edu/news-events/2024/03/2024-ashby-prize-in-computational-science-hackathon/)
+
+## Rules and Judging
+1. You can create anything you want but it **must involve computatoinal science**.
+2. You will be judgged primarially on innovation, inginuity and creativity, as well as the [other criteria mentioned here](https://ai.ncsa.illinois.edu/news-events/2024/03/2024-ashby-prize-in-computational-science-hackathon/) like your final oral presentation.
+
 # Workflow Agent
 An AI-powered coding assistant designed to streamline and solve complex scientific computational workflows. Leveraging advanced language models and a suite of development tools, it offers an intuitive interface for executing a wide range of tasks, from data analysis to full-stack development.
 
