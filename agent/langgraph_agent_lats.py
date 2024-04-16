@@ -181,7 +181,7 @@ class Reflection(BaseModel):
         lte=10,
     )
     found_solution: bool = Field(
-        description="Whether the response has fully solved the question or task."
+        description="Based on the reflection and score given, did the response fully solved the question or task."
     )
 
     def as_message(self):
