@@ -17,3 +17,5 @@ playwright==1.40.0
 ray==2.8.1
 nest_asyncio==1.6.0
 beautifulsoup4==4.12.2
+e2b==0.14.1
+termcolor==2.3.0

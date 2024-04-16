@@ -19,6 +19,7 @@ from langchain_community.tools.playwright.utils import (
 from langchain_community.utilities.github import GitHubAPIWrapper
 
 from utils.vector_db import get_vectorstore_retriever_tool
+from utils.code_interpreter_sandbox import E2B_class
 
 load_dotenv(override=True, dotenv_path='../../.env')
 # This import is required only for jupyter notebooks, since they have their own eventloop
@@ -36,6 +37,17 @@ def get_tools(langsmith_run_id: str, sync=True):
   """Main function to assemble tools for ML for Bio project."""
 
   # CODE EXECUTION - langsmith_run_id as unique identifier for the sandbox
+  # code_execution_class = E2B_class(langsmith_run_id=langsmith_run_id)
+  # e2b_python_execution_tool = StructuredTool.from_function(
+  #     func=code_execution_class.run_python_code,
+  #     name="Python-Code-Execution",
+  #     description="Executes Python3 code in an safe Docker container.",
+  # )
+  # e2b_r_execution_tool = StructuredTool.from_function(
+  #     func=code_execution_class.run_r_code,
+  #     name="R-Code-Execution",
+  #     description="Executes R code in an safe Docker container.",
+  # )
   
   # SHELL & FILES
   shell = ShellTool()

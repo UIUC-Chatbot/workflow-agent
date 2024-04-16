@@ -14,7 +14,6 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
-from langchain.chains import create_structured_output_runnable
 from langchain_core.prompt_values import ChatPromptValue
 from langchain.output_parsers.openai_tools import (
     JsonOutputToolsParser,
@@ -164,15 +163,20 @@ class Node:
 
 class Reflection(BaseModel):
     """
-    Encapsulates the reflection and scoring of a response. This includes a textual critique, a numerical score, and a flag indicating if the solution was found.
+    Encapsulates the reflection and scoring of a response. 
+    This includes a textual critique, a numerical score, and a flag indicating if the solution was found.
+    If a solution is not found, decide what agent can do better next time.
     """
 
     reflections: str = Field(
-        description="The critique and reflections on the sufficiency, superfluency,"
-        " and general quality of the response"
+        description="""The critique and reflections on the sufficiency, accuracy, and correctness, of the response. 
+        Check if all the steps needed to execute the task are satisfied and if appropriate code snippets are present. """
     )
     score: int = Field(
-        description="Score from 0-10 on the quality of the candidate response.",
+        description="""Score from 0-10 on the quality of the candidate response. 
+        If code snippets are present, check if the output of code execution is correct. 
+        Performance is evaluated based on the quality of the response, the accuracy of the code, and the completion of the task. 
+        Higher the score, the better the response.""",
         gte=0,
         lte=10,
     )
@@ -229,12 +233,17 @@ class WorkflowAgent:
         self.llm = get_llm()
         self.tools = get_tools(langsmith_run_id, sync=True)
         self.tool_executor = ToolExecutor(tools=self.tools)
+        reflection_system_message = """You are a world-class programmer and AI assistant capable of executing any goal related to software development, genAI, LLMs, and full-stack technologies.
+            Reflect and grade the assistant response to the user question below.
+            Check if the response satisfies all the steps needed to execute the task.
+            If code snippets are present, check if the output of code execution is correct.
+            """
 
         self.reflection_prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    "You are a world-class programmer and AI assistant capable of executing any goal related to software development, genAI, LLMs, and full-stack technologies. Reflect and grade the assistant response to the user question below.",
+                    reflection_system_message,
                 ),
                 ("user", "{input}"),
                 MessagesPlaceholder(variable_name="candidate"),
@@ -248,20 +257,20 @@ class WorkflowAgent:
             | PydanticToolsParser(tools=[Reflection])
         )
 
+        task_system_prompt = """You are a world-class programmer and AI assistant capable of executing any goal related to software development, genAI, LLMs, and full-stack technologies.
+        You have access to a variety of tools, including browser, code execution tools, and multiple vectorstore instances. For code execution, rely on PythonRepl, R interpreter and shell tools available in the Docker environment.
+        First, write a step-by-step plan for the task. The plan should be descriptive and well-explained. 
+        The main objective is to plan and execute the workflow efficiently. 
+        Break down the execution into small, informed steps rather than attempting everything in one go.
+        Execute each step sequentially in the provided sandbox environment, ensuring accuracy and thoroughness in analysis and reporting.
+        """
+
         self.initial_answer_chain = (
             ChatPromptTemplate.from_messages(
                 [
                     (
                         "system",
-                        """You are a world-class programmer and AI assistant capable of executing any goal related to software development, genAI, LLMs, and full-stack technologies.
-
-First, write a step-by-step plan for the task. The plan should be descriptive and well-explained. 
-
-The main objective is to plan and execute the workflow efficiently. Break down the execution into small, informed steps rather than attempting everything in one go.
-
-You have access to a variety of tools, including browser, github_tools for interacting with GitHub, and multiple vectorstore instances. Utilize the browser for internet searches and github_tools for all interactions with GitHub repositories. For code execution, rely onand shell tools available in the Docker environment to create and execute/test files.
-
-Use shell and file management tools to always execute the code and iterate on the plan based on the output.""",
+                        task_system_prompt,
                     ),
                     ("user", "{input}"),
                     MessagesPlaceholder(variable_name="messages", optional=True),
@@ -286,6 +295,7 @@ Use shell and file management tools to always execute the code and iterate on th
 
         self.graph = self.create_graph()
 
+    
     def generate_candidates(self, messages: ChatPromptValue, config: RunnableConfig):
         n = config["configurable"].get("N", 5)
         bound_kwargs = self.llm.bind_tools(tools=self.tools).kwargs
@@ -298,6 +308,7 @@ Use shell and file management tools to always execute the code and iterate on th
         )
         return [gen.message for gen in chat_result.generations[0]]
 
+    
     def create_graph(self):
         builder = StateGraph(TreeState)
         
